@@ -9,6 +9,11 @@ envs/curobo
 viewer_show.*
 eval_video/
 task_config/
+!task_config/
+task_config/*
+!task_config/_camera_config.yml
+!task_config/_config_template.yml
+!task_config/aloha-agilex_clean_50.yml
 **/.DS_Store
 
 # eval result
