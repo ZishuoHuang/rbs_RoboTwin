@@ -275,6 +275,32 @@ except Exception as e:
     print('Exception traceback:')
     traceback.print_exc()
 
+    class CuroboPlanner:
+        """Fallback planner used when curobo is unavailable."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def update_world(self, *args, **kwargs):
+            pass
+
+        def plan_path(self, *args, **kwargs):
+            return {"status": "Fail"}
+
+        def plan_batch(self, *args, **kwargs):
+            return {"status": np.array(["Failure" for _ in range(CONFIGS.ROTATE_NUM)], dtype=object)}
+
+        def plan_grippers(self, now_val, target_val):
+            num_step = 200
+            dis_val = target_val - now_val
+            step = dis_val / num_step
+            res = {}
+            vals = np.linspace(now_val, target_val, num_step)
+            res["num_step"] = num_step
+            res["per_step"] = step
+            res["result"] = vals
+            return res
+
 
 # ********************** MplibPlanner **********************
 class MplibPlanner:

@@ -17,3 +17,8 @@ Large_D435:
   fovy: 37
   w: 640
   h: 480
+
+Custom_832x480:
+  fovy: 37
+  w: 832
+  h: 480

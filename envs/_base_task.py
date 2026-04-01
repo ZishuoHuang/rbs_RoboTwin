@@ -63,13 +63,15 @@ class Base_Task(gym.Env):
         self.task_name = kwags.get("task_name")
         self.save_dir = kwags.get("save_path", "data")
         self.ep_num = kwags.get("now_ep_num", 0)
+        self.video_fps = float(kwags.get("video_fps", 30.0))
         self.render_freq = kwags.get("render_freq", 10)
         self.data_type = kwags.get("data_type", None)
         self.save_data = kwags.get("save_data", False)
         self.dual_arm = kwags.get("dual_arm", True)
         self.eval_mode = kwags.get("eval_mode", False)
 
-        self.need_topp = True  # TODO
+        # MPlib TOPP path can segfault on some driver/library combos; keep it optional.
+        self.need_topp = kwags.get("need_topp", os.getenv("ROBOTWIN_NEED_TOPP", "0") == "1")
 
         # Random
         random_setting = kwags.get("domain_randomization")
@@ -548,7 +550,7 @@ class Base_Task(gym.Env):
         # print('Merging pkl to hdf5: ', cache_path, ' -> ', target_file_path)
 
         os.makedirs(f"{self.save_dir}/data", exist_ok=True)
-        process_folder_to_hdf5_video(cache_path, target_file_path, target_video_path)
+        process_folder_to_hdf5_video(cache_path, target_file_path, target_video_path, video_fps=self.video_fps)
 
     def remove_data_cache(self):
         folder_path = self.folder_path["cache"]
