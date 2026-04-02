@@ -64,6 +64,9 @@ def create_hdf5_from_dict(hdf5_group, data_dict):
             if "rgb" in key:
                 encode_data, max_len = images_encoding(value)
                 hdf5_group.create_dataset(key, data=encode_data, dtype=f"S{max_len}")
+            elif value.dtype.kind in {"U", "S", "O"}:
+                string_dtype = h5py.string_dtype(encoding="utf-8")
+                hdf5_group.create_dataset(key, data=value.tolist(), dtype=string_dtype)
             else:
                 hdf5_group.create_dataset(key, data=value)
         else:

@@ -374,7 +374,7 @@ class Camera:
         return _get_rgb(self.observer_camera)
 
     # Get Camera Segmentation
-    def get_segmentation(self, level="mesh") -> dict:
+    def get_segmentation(self, level="mesh", return_raw=False) -> dict:
 
         def _get_segmentation(camera, level="mesh"):
             # visual_id is the unique id of each visual shape
@@ -387,6 +387,14 @@ class Camera:
                 label0_image = seg_labels[..., 1].astype(np.uint8)  # actor-level
             return color_palette[label0_image]
 
+        def _get_raw_segmentation(camera, level="mesh"):
+            seg_labels = camera.get_picture("Segmentation")  # [H, W, 4]
+            if level == "mesh":
+                return seg_labels[..., 0].astype(np.int32)
+            elif level == "actor":
+                return seg_labels[..., 1].astype(np.int32)
+            raise ValueError(f"Unsupported segmentation level: {level}")
+
         res = {
             # 'left_camera':{},
             # 'right_camera':{}
@@ -395,17 +403,27 @@ class Camera:
         if self.collect_wrist_camera:
             res["left_camera"] = {}
             res["right_camera"] = {}
-            res["left_camera"][f"{level}_segmentation"] = _get_segmentation(self.left_camera, level=level)
-            res["right_camera"][f"{level}_segmentation"] = _get_segmentation(self.right_camera, level=level)
+            if return_raw:
+                res["left_camera"][f"{level}_segmentation"] = _get_raw_segmentation(self.left_camera, level=level)
+                res["right_camera"][f"{level}_segmentation"] = _get_raw_segmentation(self.right_camera, level=level)
+            else:
+                res["left_camera"][f"{level}_segmentation"] = _get_segmentation(self.left_camera, level=level)
+                res["right_camera"][f"{level}_segmentation"] = _get_segmentation(self.right_camera, level=level)
 
         for camera, camera_name in zip(self.static_camera_list, self.static_camera_name):
             if camera_name == "head_camera":
                 if self.collect_head_camera:
                     res[camera_name] = {}
-                    res[camera_name][f"{level}_segmentation"] = _get_segmentation(camera, level=level)
+                    if return_raw:
+                        res[camera_name][f"{level}_segmentation"] = _get_raw_segmentation(camera, level=level)
+                    else:
+                        res[camera_name][f"{level}_segmentation"] = _get_segmentation(camera, level=level)
             else:
                 res[camera_name] = {}
-                res[camera_name][f"{level}_segmentation"] = _get_segmentation(camera, level=level)
+                if return_raw:
+                    res[camera_name][f"{level}_segmentation"] = _get_raw_segmentation(camera, level=level)
+                else:
+                    res[camera_name][f"{level}_segmentation"] = _get_segmentation(camera, level=level)
         return res
 
     # Get Camera Depth

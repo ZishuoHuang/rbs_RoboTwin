@@ -416,6 +416,64 @@ class Base_Task(gym.Env):
         self.scene.step()  # run a physical step
         self.scene.update_render()  # sync pose from SAPIEN to renderer
 
+    def _pose_to_matrix(self, pose):
+        return pose.to_transformation_matrix().astype(np.float32)
+
+    def _collect_rigid_actor_poses(self):
+        actor_poses = {}
+        for actor in self.scene.get_all_actors():
+            actor_poses[actor.get_name()] = self._pose_to_matrix(actor.get_pose())
+        return actor_poses
+
+    def _collect_articulation_link_poses(self):
+        articulation_poses = {}
+        candidates = []
+
+        for key, value in self.__dict__.items():
+            if isinstance(value, ArticulationActor):
+                candidates.append((key, value.actor))
+            elif hasattr(value, "get_links") and hasattr(value, "get_qpos") and hasattr(value, "get_name"):
+                candidates.append((value.get_name(), value))
+
+        seen_names = set()
+        for art_name, articulation in candidates:
+            if art_name in seen_names:
+                continue
+            seen_names.add(art_name)
+
+            link_poses = {}
+            for link in articulation.get_links():
+                link_poses[link.get_name()] = self._pose_to_matrix(link.get_pose())
+            articulation_poses[art_name] = link_poses
+
+        return articulation_poses
+
+    def _collect_gripper_contacts(self):
+        contacts_by_arm = {"left": [], "right": []}
+        gripper_names = set(getattr(self.robot, "gripper_name", []))
+
+        for contact in self.scene.get_contacts():
+            body0 = contact.bodies[0].entity.name
+            body1 = contact.bodies[1].entity.name
+
+            if body0 in gripper_names:
+                gripper_body, other_body = body0, body1
+            elif body1 in gripper_names:
+                gripper_body, other_body = body1, body0
+            else:
+                continue
+
+            if "left" in gripper_body:
+                arm_key = "left"
+            elif "right" in gripper_body:
+                arm_key = "right"
+            else:
+                continue
+
+            contacts_by_arm[arm_key].append(f"{gripper_body}->{other_body}")
+
+        return {arm_key: ";".join(sorted(set(values))) for arm_key, values in contacts_by_arm.items()}
+
     # =========================================================== Sapien ===========================================================
 
     def _update_render(self):
@@ -444,9 +502,13 @@ class Base_Task(gym.Env):
             "pointcloud": [],
             "joint_action": {},
             "endpose": {},
+            "scene_state": {},
         }
 
         pkl_dic["observation"] = self.cameras.get_config()
+        pkl_dic["scene_state"]["rigid_actor_poses"] = self._collect_rigid_actor_poses()
+        pkl_dic["scene_state"]["articulation_link_poses"] = self._collect_articulation_link_poses()
+        pkl_dic["scene_state"]["gripper_contacts"] = self._collect_gripper_contacts()
         # rgb
         if self.data_type.get("rgb", False):
             rgb = self.cameras.get_rgb()
@@ -461,11 +523,17 @@ class Base_Task(gym.Env):
             mesh_segmentation = self.cameras.get_segmentation(level="mesh")
             for camera_name in mesh_segmentation.keys():
                 pkl_dic["observation"][camera_name].update(mesh_segmentation[camera_name])
+            mesh_segmentation_raw = self.cameras.get_segmentation(level="mesh", return_raw=True)
+            for camera_name in mesh_segmentation_raw.keys():
+                pkl_dic["observation"][camera_name]["mesh_segmentation_raw"] = mesh_segmentation_raw[camera_name]["mesh_segmentation"]
         # actor_segmentation
         if self.data_type.get("actor_segmentation", False):
             actor_segmentation = self.cameras.get_segmentation(level="actor")
             for camera_name in actor_segmentation.keys():
                 pkl_dic["observation"][camera_name].update(actor_segmentation[camera_name])
+            actor_segmentation_raw = self.cameras.get_segmentation(level="actor", return_raw=True)
+            for camera_name in actor_segmentation_raw.keys():
+                pkl_dic["observation"][camera_name]["actor_segmentation_raw"] = actor_segmentation_raw[camera_name]["actor_segmentation"]
         # depth
         if self.data_type.get("depth", False):
             depth = self.cameras.get_depth()
