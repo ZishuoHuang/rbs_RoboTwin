@@ -213,10 +213,14 @@ class Base_Task(gym.Env):
         # give renderer to sapien sim
         self.engine.set_renderer(self.renderer)
 
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(32)
-        sapien.render.set_ray_tracing_path_depth(8)
-        sapien.render.set_ray_tracing_denoiser("oidn")
+        # --------- Fix for A100 Server (No Hardware RT Cores) ---------
+        # Disable Ray Tracing to avoid CUDA/Vulkan crashes or extreme slowness.
+        # SAPIEN will fallback to the default standard rasterization ("deferred").
+        # sapien.render.set_camera_shader_dir("rt")
+        # sapien.render.set_ray_tracing_samples_per_pixel(32)
+        # sapien.render.set_ray_tracing_path_depth(8)
+        # sapien.render.set_ray_tracing_denoiser("oidn")
+        # --------------------------------------------------------------
 
         # declare sapien scene
         scene_config = sapien.SceneConfig()
@@ -429,11 +433,25 @@ class Base_Task(gym.Env):
         articulation_poses = {}
         candidates = []
 
+        # Explicitly include robot arms so per-link poses are always recorded.
+        left_entity = getattr(getattr(self, "robot", None), "left_entity", None)
+        right_entity = getattr(getattr(self, "robot", None), "right_entity", None)
+        if left_entity is not None and hasattr(left_entity, "get_links"):
+            candidates.append(("left_robot", left_entity))
+        if right_entity is not None and hasattr(right_entity, "get_links"):
+            candidates.append(("right_robot", right_entity))
+
         for key, value in self.__dict__.items():
             if isinstance(value, ArticulationActor):
                 candidates.append((key, value.actor))
             elif hasattr(value, "get_links") and hasattr(value, "get_qpos") and hasattr(value, "get_name"):
                 candidates.append((value.get_name(), value))
+
+        get_all_articulations = getattr(self.scene, "get_all_articulations", None)
+        if callable(get_all_articulations):
+            for idx, articulation in enumerate(get_all_articulations()):
+                art_name = getattr(articulation, "get_name", lambda: f"articulation_{idx}")()
+                candidates.append((art_name if art_name else f"articulation_{idx}", articulation))
 
         seen_names = set()
         for art_name, articulation in candidates:

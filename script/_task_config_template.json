@@ -15,8 +15,12 @@
     "crazy_random_light_rate": 0
   },
   "camera": {
-    "head_camera_type": "D435",
-    "wrist_camera_type": "D435",
+    "head_camera_type": "Custom_832x480",
+    "wrist_camera_type": "Custom_832x480",
+    "world_camera1_width": 832,
+    "world_camera1_height": 480,
+    "world_camera2_width": 832,
+    "world_camera2_height": 480,
     "collect_head_camera": true,
     "collect_wrist_camera": true
   },

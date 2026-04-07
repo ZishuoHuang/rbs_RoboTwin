@@ -1,5 +1,5 @@
 render_freq: 0
-episode_num: 50
+episode_num: 5
 use_seed: true
 save_freq: 16
 embodiment: [aloha-agilex]
@@ -15,8 +15,12 @@ domain_randomization:
 camera:
   head_camera_type: Custom_832x480
   wrist_camera_type: Custom_832x480
+  world_camera1_width: 832
+  world_camera1_height: 480
   collect_head_camera: true
-  collect_wrist_camera: true
+  collect_wrist_camera: false
+  collect_world_camera: true
+  collect_observer_camera: false
 data_type:
   rgb: true
   third_view: false
@@ -25,8 +29,8 @@ data_type:
   observer: false
   endpose: true
   qpos: true
-  mesh_segmentation: True
-  actor_segmentation: True
+  mesh_segmentation: true
+  actor_segmentation: true
 pcd_down_sample_num: 1024
 pcd_crop: true
 save_path: ./data

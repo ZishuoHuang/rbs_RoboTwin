@@ -51,10 +51,11 @@ class Helper:
         # give renderer to sapien sim
         self.engine.set_renderer(self.renderer)
 
-        sapien.render.set_camera_shader_dir("rt")
-        sapien.render.set_ray_tracing_samples_per_pixel(32)
-        sapien.render.set_ray_tracing_path_depth(8)
-        sapien.render.set_ray_tracing_denoiser("oidn")
+        # Disable Ray Tracing for A100 compatibility
+        # sapien.render.set_camera_shader_dir("rt")
+        # sapien.render.set_ray_tracing_samples_per_pixel(32)
+        # sapien.render.set_ray_tracing_path_depth(8)
+        # sapien.render.set_ray_tracing_denoiser("oidn")
 
         # declare sapien scene
         scene_config = sapien.SceneConfig()
